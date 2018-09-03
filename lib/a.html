@@ -2,14 +2,20 @@
 <script src="FunctionPromise.js"></script>
 <script src="pypyjs.js"></script>
 <script>
-pypyjs.ready().then(function() {
-  return pypyjs.set('total', 0);
-}).then(function() {
-  return pypyjs.exec('for i in range(1000 * 10): total += i');
-}).then(function() {
-  return pypyjs.get('total');
-}).then(function(result) {
-  console.log('result: ' + result);
-});
+function benchmark() {
+  var startTime;
+  pypyjs.set('total', 0).then(function() {
+    startTime = Date.now();
+    return pypyjs.exec('for i in range(1000 * 10): total += i');
+  }).then(function() {
+    return pypyjs.get('total');
+  }).then(function(result) {
+    console.log('result: ' + result + ' (took ' + (Date.now() - startTime) + ' ms');
+    // Run it again!
+    setTimeout(benchmark, 1);
+  });
+}
+
+pypyjs.ready().then(benchmark);
 </script>
 
