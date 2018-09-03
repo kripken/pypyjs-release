@@ -75,6 +75,41 @@ echo "generate embedded intrinsics module"
 
 python $BINARYEN_SCRIPTS/embedwast.py $BINARYEN_SRC/passes/wasm-intrinsics.wast $BINARYEN_SRC/passes/WasmIntrinsics.cpp
 
+echo "building shared bitcode"
+
+"$EMSCRIPTEN/em++" \
+  $EMCC_ARGS \
+  $BINARYEN_SRC/asmjs/asm_v_wasm.cpp \
+  $BINARYEN_SRC/asmjs/asmangle.cpp \
+  $BINARYEN_SRC/asmjs/shared-constants.cpp \
+  $BINARYEN_SRC/emscripten-optimizer/optimizer-shared.cpp \
+  $BINARYEN_SRC/emscripten-optimizer/parser.cpp \
+  $BINARYEN_SRC/emscripten-optimizer/simple_ast.cpp \
+  $BINARYEN_SRC/ir/ExpressionAnalyzer.cpp \
+  $BINARYEN_SRC/ir/ExpressionManipulator.cpp \
+  $BINARYEN_SRC/ir/LocalGraph.cpp \
+  $BINARYEN_SRC/passes/pass.cpp \
+  $BINARYEN_SRC/passes/DeadCodeElimination.cpp \
+  $BINARYEN_SRC/passes/LegalizeJSInterface.cpp \
+  $BINARYEN_SRC/passes/PostEmscripten.cpp \
+  $BINARYEN_SRC/passes/RelooperJumpThreading.cpp \
+  $BINARYEN_SRC/passes/TrapMode.cpp \
+  $BINARYEN_SRC/support/bits.cpp \
+  $BINARYEN_SRC/support/colors.cpp \
+  $BINARYEN_SRC/support/file.cpp \
+  $BINARYEN_SRC/support/safe_integer.cpp \
+  $BINARYEN_SRC/support/threads.cpp \
+  $BINARYEN_SRC/wasm/literal.cpp \
+  $BINARYEN_SRC/wasm/wasm-binary.cpp \
+  $BINARYEN_SRC/wasm/wasm-emscripten.cpp \
+  $BINARYEN_SRC/wasm/wasm-interpreter.cpp \
+  $BINARYEN_SRC/wasm/wasm-io.cpp \
+  $BINARYEN_SRC/wasm/wasm-s-parser.cpp \
+  $BINARYEN_SRC/wasm/wasm-type.cpp \
+  $BINARYEN_SRC/wasm/wasm-validator.cpp \
+  $BINARYEN_SRC/wasm/wasm.cpp \
+  -I$BINARYEN_SRC \
+  -o shared.bc
 
 echo "building binaryen.js"
 
