@@ -355,15 +355,3 @@ export_function "_BinaryenModuleAllocateAndWrite"
   -s 'EXPORT_NAME="Binaryen"' \
   --post-js $BINARYEN_SRC/js/binaryen.js-post.js
 
-echo "building wasm.js"
-
-"$EMSCRIPTEN/em++" \
-  $EMCC_ARGS \
-  $BINARYEN_SRC/wasm-js.cpp \
-  shared.bc \
-  -I$BINARYEN_SRC/ \
-  -o $BINARYEN_BIN/wasm${OUT_FILE_SUFFIX}.js \
-  -s MODULARIZE=1 \
-  -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["writeAsciiToMemory"]' \
-  -s 'EXPORT_NAME="WasmJS"'
-
