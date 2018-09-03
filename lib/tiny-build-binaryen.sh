@@ -342,6 +342,7 @@ export_function "_BinaryenAtomicWake"
 
 # 'Module' operations
 export_function "_BinaryenModuleFromAsmjs"
+export_function "_BinaryenModuleDispose"
 export_function "_BinaryenModuleAllocateAndWrite"
 
 "$EMSCRIPTEN/em++" \
