@@ -1,0 +1,126 @@
+--- pretty.pypyjs.vm.js	2018-09-03 10:06:58.817650889 -0700
++++ pypyjs.vm.js	2018-09-03 10:07:02.189508093 -0700
+@@ -1,10 +1,22 @@
++var WASM = 1;
++var buffer;
++var EXPECTED_TOTAL_MEMORY = 128 * 1024 * 1024;
++if (!WASM) {
++ buffer = new ArrayBuffer(EXPECTED_TOTAL_MEMORY);
++} else {
++ var WASM_PAGE_SIZE = 65536;
++ var wasmMemory = new WebAssembly.Memory({ 'initial': EXPECTED_TOTAL_MEMORY / WASM_PAGE_SIZE , 'maximum': EXPECTED_TOTAL_MEMORY / WASM_PAGE_SIZE });
++ buffer = wasmMemory.buffer;
++ var wasmTable = new WebAssembly.Table({ 'initial': 0, 'maximum': 0, 'element': 'anyfunc' });
++}
++
+ var Module;
+ if (!Module) Module = (typeof Module !== "undefined" ? Module : null) || {};
+ var moduleOverrides = {};
+ for (var key in Module) {
+  if (Module.hasOwnProperty(key)) {
+   moduleOverrides[key] = Module[key];
+  }
+ }
+ var ENVIRONMENT_IS_WEB = typeof window === "object";
+ var ENVIRONMENT_IS_NODE = typeof process === "object" && typeof require === "function" && !ENVIRONMENT_IS_WEB;
+@@ -1015,21 +1027,24 @@
+   totalMemory *= 2;
+  } else {
+   totalMemory += 16 * 1024 * 1024;
+  }
+ }
+ if (totalMemory !== TOTAL_MEMORY) {
+  Module.printErr("increasing TOTAL_MEMORY to " + totalMemory + " to be compliant with the asm.js spec (and given that TOTAL_STACK=" + TOTAL_STACK + ")");
+  TOTAL_MEMORY = totalMemory;
+ }
+ assert(typeof Int32Array !== "undefined" && typeof Float64Array !== "undefined" && !!(new Int32Array(1))["subarray"] && !!(new Int32Array(1))["set"], "JS engine does not provide full typed array support");
+-var buffer = new ArrayBuffer(TOTAL_MEMORY);
++
++// WASM changes
++assert(TOTAL_MEMORY == buffer.byteLength);
++
+ HEAP8 = new Int8Array(buffer);
+ HEAP16 = new Int16Array(buffer);
+ HEAP32 = new Int32Array(buffer);
+ HEAPU8 = new Uint8Array(buffer);
+ HEAPU16 = new Uint16Array(buffer);
+ HEAPU32 = new Uint32Array(buffer);
+ HEAPF32 = new Float32Array(buffer);
+ HEAPF64 = new Float64Array(buffer);
+ HEAP32[0] = 255;
+ assert(HEAPU8[0] === 255 && HEAPU8[3] === 0, "Typed arrays 2 must be run on a little-endian system");
+@@ -8510,40 +8525,60 @@
+ function _jitRecompile(id, addr) {
+  id = id | 0;
+  addr = addr | 0;
+  var sourceChars = [];
+  var i = addr;
+  while (HEAP8[i] != 0) {
+   sourceChars.push(String.fromCharCode(HEAP8[i]));
+   i++;
+  }
+  var source = sourceChars.join("");
+- //console.log('JIT! ' + source);
+- var mkfunc = new Function("return (" + source + ")");
+- var stdlib = {
+-  "Math": Math,
+-  "Int8Array": Int8Array,
+-  "Int16Array": Int16Array,
+-  "Int32Array": Int32Array,
+-  "Uint8Array": Uint8Array,
+-  "Uint16Array": Uint16Array,
+-  "Uint32Array": Uint32Array,
+-  "Float32Array": Float32Array,
+-  "Float64Array": Float64Array
+- };
++ console.log('JIT! ' + source.length + ' source bytes');
+  if (typeof Module.tempDoublePtr === "undefined") {
+   if (typeof tempDoublePtr === "undefined") {
+    throw "NO TEMP DOUBLE PTR";
+   }
+   Module.tempDoublePtr = tempDoublePtr;
+  }
+- Module._jitCompiledFunctions[id] = mkfunc()(stdlib, Module, buffer);
++ var func;
++ if (!WASM) {
++  var mkfunc = new Function("return (" + source + ")");
++  var stdlib = {
++   "Math": Math,
++   "Int8Array": Int8Array,
++   "Int16Array": Int16Array,
++   "Int32Array": Int32Array,
++   "Uint8Array": Uint8Array,
++   "Uint16Array": Uint16Array,
++   "Uint32Array": Uint32Array,
++   "Float32Array": Float32Array,
++   "Float64Array": Float64Array
++  };
++  func = mkfunc()(stdlib, Module, buffer);
++ } else {
++  var module = Binaryen.asm2wasm(source);
++  var binary = module.emitBinary();
++  module.dispose();
++  console.log('     ' + binary.length + ' wasm binary bytes');
++  var info = {
++   env: {
++    memory: wasmMemory,
++    table: wasmTable,
++    memoryBase: 0,
++    tableBase: 0
++   },
++   foreign: Module
++  };
++  var instance = new WebAssembly.Instance(new WebAssembly.Module(binary), info);
++  func = instance.exports.singleton;
++ }
++ Module._jitCompiledFunctions[id] = func;
+  return id;
+ }
+ function _jitInvoke(id, frame, tladdr, label) {
+  id = id | 0;
+  label = label | 0;
+  frame = frame | 0;
+  tladdr = tladdr | 0;
+  var func = Module._jitCompiledFunctions[id];
+  if (func) {
+   return func(frame, tladdr, label) | 0;
