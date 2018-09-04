@@ -11,6 +11,9 @@
 + var wasmMemory = new WebAssembly.Memory({ 'initial': EXPECTED_TOTAL_MEMORY / WASM_PAGE_SIZE , 'maximum': EXPECTED_TOTAL_MEMORY / WASM_PAGE_SIZE });
 + buffer = wasmMemory.buffer;
 + var wasmTable = new WebAssembly.Table({ 'initial': 0, 'maximum': 0, 'element': 'anyfunc' });
++ if (typeof require === 'function') {
++  Binaryen = require("./binaryen.js");
++ }
 +}
 +
  var Module;
